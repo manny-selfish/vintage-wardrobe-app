@@ -7,23 +7,26 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Wardrobe">
+<meta name="apple-mobile-web-app-title" content="Hang-Up">
 <link rel="icon" id="faviconLink">
 <link rel="apple-touch-icon" id="touchIconLink">
 <link rel="manifest" id="manifestLink">
-<title>My Wardrobe - 服の管理</title>
+<title>Hang-Up - vintage, logged</title>
 <script>
 (function () {
   var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>" +
     "<rect width='100' height='100' rx='22' fill='#7a4b32'/>" +
-    "<text x='50' y='68' font-family='Arial, sans-serif' font-size='54' font-weight='700' fill='#ffffff' text-anchor='middle'>W</text>" +
+    "<path d='M50,38 Q44,34 50,30 Q56,26 50,22 Q44,18 50,15' fill='none' stroke='#f6f3ee' stroke-width='3.2' stroke-linecap='round'/>" +
+    "<circle cx='50' cy='40' r='3.5' fill='#f6f3ee'/>" +
+    "<path d='M50,40 Q34,50 18,64' fill='none' stroke='#f6f3ee' stroke-width='4' stroke-linecap='round'/>" +
+    "<path d='M50,40 Q66,50 82,64' fill='none' stroke='#f6f3ee' stroke-width='4' stroke-linecap='round'/>" +
     "</svg>";
   var iconURL = 'data:image/svg+xml,' + encodeURIComponent(svg);
   document.getElementById('faviconLink').href = iconURL;
   document.getElementById('touchIconLink').href = iconURL;
   var manifest = {
-    name: 'My Wardrobe - 服の管理',
-    short_name: 'Wardrobe',
+    name: 'Hang-Up - vintage, logged',
+    short_name: 'Hang-Up',
     start_url: location.href,
     display: 'standalone',
     background_color: '#f6f3ee',
@@ -107,7 +110,8 @@
     top: 0;
     z-index: 10;
   }
-  .app-header h1 { font-size: 18px; }
+  .app-header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+  .app-header .logo-mark { flex-shrink: 0; }
   .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   .toolbar {
@@ -256,7 +260,16 @@
 <body>
 
 <header class="app-header">
-  <h1>My Wardrobe</h1>
+  <h1>
+    <svg class="logo-mark" width="26" height="26" viewBox="0 0 100 100" aria-hidden="true">
+      <rect width="100" height="100" rx="22" fill="#7a4b32"/>
+      <path d="M50,38 Q44,34 50,30 Q56,26 50,22 Q44,18 50,15" fill="none" stroke="#f6f3ee" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="50" cy="40" r="4.5" fill="#f6f3ee"/>
+      <path d="M50,40 Q34,50 18,64" fill="none" stroke="#f6f3ee" stroke-width="5" stroke-linecap="round"/>
+      <path d="M50,40 Q66,50 82,64" fill="none" stroke="#f6f3ee" stroke-width="5" stroke-linecap="round"/>
+    </svg>
+    Hang-Up
+  </h1>
   <div class="header-actions">
     <button id="addBtn" class="primary" type="button">＋ 追加</button>
     <button id="exportBtn" type="button">バックアップを書き出し</button>
@@ -794,7 +807,7 @@ $('exportBtn').addEventListener('click', async () => {
     return { ...item, photos };
   }));
   const payload = {
-    appName: 'vintage-wardrobe',
+    appName: 'hang-up',
     version: 1,
     exportedAt: new Date().toISOString(),
     items: exportItems
@@ -803,7 +816,7 @@ $('exportBtn').addEventListener('click', async () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `wardrobe-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `hangup-backup-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
