@@ -550,18 +550,18 @@ function escapeHTML(str) {
 $('googleSignInBtn').addEventListener('click', async () => {
   loginError.hidden = true;
   try {
-    await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider);
+    console.log('signInWithPopup success', result.user.uid);
   } catch (err) {
-    console.error(err);
-    if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-      loginError.textContent = 'ログインに失敗しました: ' + err.message;
-      loginError.hidden = false;
-    }
+    console.error('signInWithPopup error', err.code, err.message, err);
+    loginError.textContent = `ログインに失敗しました [${err.code || 'unknown'}]: ${err.message}`;
+    loginError.hidden = false;
   }
 });
 $('signOutBtn').addEventListener('click', () => signOut(auth));
 
 onAuthStateChanged(auth, (user) => {
+  console.log('onAuthStateChanged', user ? user.uid : null);
   currentUser = user;
   loadingScreen.hidden = true;
   if (user) {
@@ -569,7 +569,12 @@ onAuthStateChanged(auth, (user) => {
     document.body.classList.add('logged-in');
     userAvatar.hidden = !user.photoURL;
     if (user.photoURL) userAvatar.src = user.photoURL;
-    subscribeToItems();
+    try {
+      subscribeToItems();
+    } catch (err) {
+      console.error('subscribeToItems error', err);
+      showToast('データ取得でエラーが発生しました');
+    }
   } else {
     loginScreen.hidden = false;
     document.body.classList.remove('logged-in');
@@ -578,6 +583,12 @@ onAuthStateChanged(auth, (user) => {
     updateFilterOptions();
     renderCards();
   }
+}, (err) => {
+  console.error('onAuthStateChanged listener error', err);
+  loadingScreen.hidden = true;
+  loginScreen.hidden = false;
+  loginError.textContent = '認証状態の監視でエラーが発生しました: ' + err.message;
+  loginError.hidden = false;
 });
 
 function subscribeToItems() {
