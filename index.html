@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#7a4b32">
+<meta name="theme-color" content="#14181c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,11 +15,11 @@
 <script>
 (function () {
   var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>" +
-    "<rect width='100' height='100' rx='22' fill='#7a4b32'/>" +
-    "<path d='M50,38 Q44,34 50,30 Q56,26 50,22 Q44,18 50,15' fill='none' stroke='#f6f3ee' stroke-width='3.2' stroke-linecap='round'/>" +
-    "<circle cx='50' cy='40' r='3.5' fill='#f6f3ee'/>" +
-    "<path d='M50,40 Q34,50 18,64' fill='none' stroke='#f6f3ee' stroke-width='4' stroke-linecap='round'/>" +
-    "<path d='M50,40 Q66,50 82,64' fill='none' stroke='#f6f3ee' stroke-width='4' stroke-linecap='round'/>" +
+    "<rect width='100' height='100' rx='22' fill='#14181c'/>" +
+    "<path d='M50,38 Q44,34 50,30 Q56,26 50,22 Q44,18 50,15' fill='none' stroke='#00e054' stroke-width='3.2' stroke-linecap='round'/>" +
+    "<circle cx='50' cy='40' r='3.5' fill='#00e054'/>" +
+    "<path d='M50,40 Q34,50 18,64' fill='none' stroke='#00e054' stroke-width='4' stroke-linecap='round'/>" +
+    "<path d='M50,40 Q66,50 82,64' fill='none' stroke='#00e054' stroke-width='4' stroke-linecap='round'/>" +
     "</svg>";
   var iconURL = 'data:image/svg+xml,' + encodeURIComponent(svg);
   document.getElementById('faviconLink').href = iconURL;
@@ -29,8 +29,8 @@
     short_name: 'Hang-Up',
     start_url: location.href,
     display: 'standalone',
-    background_color: '#f6f3ee',
-    theme_color: '#7a4b32',
+    background_color: '#14181c',
+    theme_color: '#14181c',
     icons: [
       { src: iconURL, sizes: '192x192', type: 'image/svg+xml' },
       { src: iconURL, sizes: '512x512', type: 'image/svg+xml' }
@@ -42,17 +42,19 @@
 </script>
 <style>
   :root {
-    --bg: #f6f3ee;
-    --surface: #ffffff;
-    --border: #e2dcd0;
-    --text: #2c2620;
-    --text-sub: #756c60;
-    --accent: #7a4b32;
-    --accent-hover: #603a27;
-    --danger: #a13d34;
-    --danger-hover: #82312a;
-    --radius: 10px;
-    --shadow: 0 1px 3px rgba(44, 38, 32, 0.12);
+    --bg: #14181c;
+    --surface: #1c2228;
+    --surface-2: #242c34;
+    --border: #2c3440;
+    --text: #ffffff;
+    --text-sub: #8ea0ad;
+    --accent: #00e054;
+    --accent-hover: #00c94a;
+    --accent-ink: #06210f;
+    --danger: #e5484d;
+    --danger-hover: #c93a3f;
+    --radius: 8px;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
@@ -70,7 +72,7 @@
     font-family: inherit;
     cursor: pointer;
     border: 1px solid var(--border);
-    background: var(--surface);
+    background: var(--surface-2);
     color: var(--text);
     border-radius: 8px;
     padding: 8px 14px;
@@ -78,8 +80,8 @@
     min-height: 40px;
     touch-action: manipulation;
   }
-  button:hover { background: #f1ece3; }
-  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:hover { background: var(--border); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
   button.primary:hover { background: var(--accent-hover); }
   button.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
   button.danger:hover { background: var(--danger-hover); }
@@ -90,10 +92,11 @@
     padding: 10px;
     border: 1px solid var(--border);
     border-radius: 8px;
-    background: #fff;
+    background: var(--surface-2);
     color: var(--text);
     width: 100%;
   }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   textarea { resize: vertical; min-height: 64px; }
   label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
 
@@ -130,8 +133,8 @@
 
   .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
   }
   .card {
     background: var(--surface);
@@ -142,12 +145,12 @@
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
-    transition: transform 0.1s;
+    transition: transform 0.12s, box-shadow 0.12s;
   }
-  .card:hover { transform: translateY(-2px); }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
   .card-thumb {
-    aspect-ratio: 1 / 1;
-    background: #ece6da;
+    aspect-ratio: 2 / 3;
+    background: var(--surface-2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -155,27 +158,29 @@
   }
   .card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .no-photo { color: var(--text-sub); font-size: 12px; }
-  .card-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 3px; }
+  .card-body { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 3px; }
   .card-category {
     align-self: flex-start;
-    font-size: 11px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
     padding: 2px 8px;
     border-radius: 20px;
-    background: #ece6da;
+    background: var(--surface-2);
     color: var(--text-sub);
   }
-  .card[data-category="トップス"] .card-category { background: #dfe9f5; color: #2f5a86; }
-  .card[data-category="ボトムス"] .card-category { background: #e1eee1; color: #3c6e46; }
-  .card[data-category="アウター"] .card-category { background: #ecdfd2; color: #7a4b32; }
-  .card[data-category="シューズ"] .card-category { background: #f6e6d3; color: #a1642b; }
-  .card[data-category="小物"] .card-category { background: #ece0f0; color: #6d3f83; }
-  .card-brand { font-weight: 600; font-size: 14px; margin-top: 2px; }
-  .card-name { font-size: 13px; color: var(--text-sub); }
-  .card-meta { display: flex; gap: 8px; font-size: 12px; color: var(--text-sub); margin-top: 4px; flex-wrap: wrap; }
+  .card[data-category="トップス"] .card-category { background: rgba(55,138,221,0.18); color: #7cb8f5; }
+  .card[data-category="ボトムス"] .card-category { background: rgba(120,190,90,0.18); color: #96d66f; }
+  .card[data-category="アウター"] .card-category { background: rgba(224,168,85,0.18); color: #e8b96a; }
+  .card[data-category="シューズ"] .card-category { background: rgba(244,155,60,0.18); color: #f4a94f; }
+  .card[data-category="小物"] .card-category { background: rgba(236,147,177,0.18); color: #ec9bb8; }
+  .card-brand { font-weight: 700; font-size: 13px; margin-top: 2px; }
+  .card-name { font-size: 12px; color: var(--text-sub); }
+  .card-meta { display: flex; gap: 8px; font-size: 11px; color: var(--text-sub); margin-top: 4px; flex-wrap: wrap; }
 
   .modal-overlay {
     position: fixed; inset: 0;
-    background: rgba(30, 25, 20, 0.5);
+    background: rgba(0, 0, 0, 0.7);
     align-items: flex-start; justify-content: center;
     padding: 24px 12px;
     overflow-y: auto;
@@ -184,12 +189,13 @@
   .modal-overlay:not([hidden]) { display: flex; }
   .modal {
     background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 20px;
     width: 100%;
     max-width: 520px;
     position: relative;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
   }
   .modal-large { max-width: 720px; }
   .modal-close {
@@ -197,7 +203,7 @@
     border: none; background: transparent; font-size: 20px; line-height: 1;
     padding: 4px 8px; color: var(--text-sub);
   }
-  .modal-close:hover { background: #f1ece3; }
+  .modal-close:hover { background: var(--surface-2); }
 
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .form-grid .full { grid-column: 1 / -1; }
@@ -214,11 +220,11 @@
     padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
     background: var(--surface); cursor: pointer; font-size: 14px; touch-action: manipulation;
   }
-  .photo-input-btn:hover { background: #f1ece3; }
+  .photo-input-btn:hover { background: var(--border); }
   .photo-preview-list { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-  .photo-preview-item { width: 110px; border: 1px solid var(--border); border-radius: 8px; padding: 6px; position: relative; background: #faf8f4; }
+  .photo-preview-item { width: 110px; border: 1px solid var(--border); border-radius: 8px; padding: 6px; position: relative; background: var(--surface-2); }
   .photo-preview-item img { width: 100%; height: 90px; object-fit: cover; border-radius: 6px; display: block; }
-  .thumb-badge { position: absolute; top: 10px; left: 10px; background: var(--accent); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 20px; }
+  .thumb-badge { position: absolute; top: 10px; left: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 20px; }
   .photo-preview-controls { display: flex; gap: 4px; margin-top: 6px; }
   .photo-preview-controls button { flex: 1; padding: 4px 2px; font-size: 12px; }
 
@@ -227,14 +233,14 @@
   .detail-rows { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
   .detail-row { display: flex; gap: 10px; font-size: 14px; border-bottom: 1px dashed var(--border); padding-bottom: 6px; }
   .detail-label { color: var(--text-sub); min-width: 140px; flex-shrink: 0; }
-  .measure-item { background: #faf8f4; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; display: flex; justify-content: space-between; }
+  .measure-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; display: flex; justify-content: space-between; }
   .pre-wrap { white-space: pre-wrap; font-size: 14px; }
   .detail-actions { display: flex; gap: 10px; margin-top: 16px; }
 
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: #2c2620; color: #fff; padding: 10px 18px; border-radius: 20px;
-    font-size: 13px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    background: var(--accent); color: var(--accent-ink); font-weight: 700; padding: 10px 18px; border-radius: 20px;
+    font-size: 13px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
 
   .fab { display: none; }
@@ -249,8 +255,8 @@
       display: flex; align-items: center; justify-content: center;
       position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom));
       width: 56px; height: 56px; border-radius: 50%;
-      background: var(--accent); color: #fff; font-size: 26px; line-height: 1;
-      border: none; box-shadow: 0 4px 14px rgba(44, 38, 32, 0.35);
+      background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 26px; line-height: 1;
+      border: none; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
       z-index: 50; touch-action: manipulation;
     }
     .fab:hover { background: var(--accent-hover); }
@@ -261,12 +267,11 @@
 
 <header class="app-header">
   <h1>
-    <svg class="logo-mark" width="26" height="26" viewBox="0 0 100 100" aria-hidden="true">
-      <rect width="100" height="100" rx="22" fill="#7a4b32"/>
-      <path d="M50,38 Q44,34 50,30 Q56,26 50,22 Q44,18 50,15" fill="none" stroke="#f6f3ee" stroke-width="4" stroke-linecap="round"/>
-      <circle cx="50" cy="40" r="4.5" fill="#f6f3ee"/>
-      <path d="M50,40 Q34,50 18,64" fill="none" stroke="#f6f3ee" stroke-width="5" stroke-linecap="round"/>
-      <path d="M50,40 Q66,50 82,64" fill="none" stroke="#f6f3ee" stroke-width="5" stroke-linecap="round"/>
+    <svg class="logo-mark" width="24" height="24" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M50,38 Q44,34 50,30 Q56,26 50,22 Q44,18 50,15" fill="none" stroke="#00e054" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="50" cy="40" r="5" fill="#00e054"/>
+      <path d="M50,40 Q34,50 18,64" fill="none" stroke="#00e054" stroke-width="6" stroke-linecap="round"/>
+      <path d="M50,40 Q66,50 82,64" fill="none" stroke="#00e054" stroke-width="6" stroke-linecap="round"/>
     </svg>
     Hang-Up
   </h1>
