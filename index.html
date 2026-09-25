@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#7a4b32">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wardrobe">
+<link rel="icon" id="faviconLink">
+<link rel="apple-touch-icon" id="touchIconLink">
+<link rel="manifest" id="manifestLink">
+<title>My Wardrobe - 服の管理</title>
+<script>
+(function () {
+  var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>" +
+    "<rect width='100' height='100' rx='22' fill='#7a4b32'/>" +
+    "<text x='50' y='68' font-family='Arial, sans-serif' font-size='54' font-weight='700' fill='#ffffff' text-anchor='middle'>W</text>" +
+    "</svg>";
+  var iconURL = 'data:image/svg+xml,' + encodeURIComponent(svg);
+  document.getElementById('faviconLink').href = iconURL;
+  document.getElementById('touchIconLink').href = iconURL;
+  var manifest = {
+    name: 'My Wardrobe - 服の管理',
+    short_name: 'Wardrobe',
+    start_url: location.href,
+    display: 'standalone',
+    background_color: '#f6f3ee',
+    theme_color: '#7a4b32',
+    icons: [
+      { src: iconURL, sizes: '192x192', type: 'image/svg+xml' },
+      { src: iconURL, sizes: '512x512', type: 'image/svg+xml' }
+    ]
+  };
+  var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  document.getElementById('manifestLink').href = URL.createObjectURL(blob);
+})();
+</script>
+<style>
+  :root {
+    --bg: #f6f3ee;
+    --surface: #ffffff;
+    --border: #e2dcd0;
+    --text: #2c2620;
+    --text-sub: #756c60;
+    --accent: #7a4b32;
+    --accent-hover: #603a27;
+    --danger: #a13d34;
+    --danger-hover: #82312a;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(44, 38, 32, 0.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding-bottom: env(safe-area-inset-bottom);
+    overscroll-behavior-y: contain;
+  }
+  h1, h2, h3 { margin: 0 0 8px; }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 14px;
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+  button:hover { background: #f1ece3; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.primary:hover { background: var(--accent-hover); }
+  button.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  button.danger:hover { background: var(--danger-hover); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  input, select, textarea {
+    font-family: inherit;
+    font-size: 16px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    width: 100%;
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 14px calc(16px + env(safe-area-inset-left));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .app-header h1 { font-size: 18px; }
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .toolbar {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #searchInput { max-width: 480px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filters select { width: auto; min-width: 130px; flex: 1 1 130px; }
+
+  main { padding: 0 16px 40px; max-width: 1200px; margin: 0 auto; }
+  #resultCount { color: var(--text-sub); font-size: 13px; margin: 4px 0 12px; }
+  #emptyState { color: var(--text-sub); text-align: center; padding: 60px 20px; }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.1s;
+  }
+  .card:hover { transform: translateY(-2px); }
+  .card-thumb {
+    aspect-ratio: 1 / 1;
+    background: #ece6da;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .no-photo { color: var(--text-sub); font-size: 12px; }
+  .card-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 3px; }
+  .card-category {
+    align-self: flex-start;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: #ece6da;
+    color: var(--text-sub);
+  }
+  .card[data-category="トップス"] .card-category { background: #dfe9f5; color: #2f5a86; }
+  .card[data-category="ボトムス"] .card-category { background: #e1eee1; color: #3c6e46; }
+  .card[data-category="アウター"] .card-category { background: #ecdfd2; color: #7a4b32; }
+  .card[data-category="シューズ"] .card-category { background: #f6e6d3; color: #a1642b; }
+  .card[data-category="小物"] .card-category { background: #ece0f0; color: #6d3f83; }
+  .card-brand { font-weight: 600; font-size: 14px; margin-top: 2px; }
+  .card-name { font-size: 13px; color: var(--text-sub); }
+  .card-meta { display: flex; gap: 8px; font-size: 12px; color: var(--text-sub); margin-top: 4px; flex-wrap: wrap; }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(30, 25, 20, 0.5);
+    align-items: flex-start; justify-content: center;
+    padding: 24px 12px;
+    overflow-y: auto;
+    z-index: 100;
+  }
+  .modal-overlay:not([hidden]) { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    width: 100%;
+    max-width: 520px;
+    position: relative;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  }
+  .modal-large { max-width: 720px; }
+  .modal-close {
+    position: absolute; top: 12px; right: 12px;
+    border: none; background: transparent; font-size: 20px; line-height: 1;
+    padding: 4px 8px; color: var(--text-sub);
+  }
+  .modal-close:hover { background: #f1ece3; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .form-group { margin-bottom: 4px; }
+  fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+  legend { font-size: 13px; color: var(--text-sub); padding: 0 6px; }
+  .measure-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+  .photo-input-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .photo-input-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    flex: 1; min-width: 150px; min-height: 44px;
+    padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); cursor: pointer; font-size: 14px; touch-action: manipulation;
+  }
+  .photo-input-btn:hover { background: #f1ece3; }
+  .photo-preview-list { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .photo-preview-item { width: 110px; border: 1px solid var(--border); border-radius: 8px; padding: 6px; position: relative; background: #faf8f4; }
+  .photo-preview-item img { width: 100%; height: 90px; object-fit: cover; border-radius: 6px; display: block; }
+  .thumb-badge { position: absolute; top: 10px; left: 10px; background: var(--accent); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 20px; }
+  .photo-preview-controls { display: flex; gap: 4px; margin-top: 6px; }
+  .photo-preview-controls button { flex: 1; padding: 4px 2px; font-size: 12px; }
+
+  .detail-photos { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
+  .detail-photo { height: 220px; border-radius: 8px; object-fit: cover; flex: 0 0 auto; }
+  .detail-rows { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+  .detail-row { display: flex; gap: 10px; font-size: 14px; border-bottom: 1px dashed var(--border); padding-bottom: 6px; }
+  .detail-label { color: var(--text-sub); min-width: 140px; flex-shrink: 0; }
+  .measure-item { background: #faf8f4; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; display: flex; justify-content: space-between; }
+  .pre-wrap { white-space: pre-wrap; font-size: 14px; }
+  .detail-actions { display: flex; gap: 10px; margin-top: 16px; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #2c2620; color: #fff; padding: 10px 18px; border-radius: 20px;
+    font-size: 13px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+
+  .fab { display: none; }
+
+  @media (max-width: 560px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .filters { flex-direction: column; align-items: stretch; }
+    .filters select, .filters button { width: 100%; flex: none; }
+    .app-header { flex-direction: column; align-items: flex-start; }
+    .app-header #addBtn { display: none; }
+    .fab {
+      display: flex; align-items: center; justify-content: center;
+      position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom));
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--accent); color: #fff; font-size: 26px; line-height: 1;
+      border: none; box-shadow: 0 4px 14px rgba(44, 38, 32, 0.35);
+      z-index: 50; touch-action: manipulation;
+    }
+    .fab:hover { background: var(--accent-hover); }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>My Wardrobe</h1>
+  <div class="header-actions">
+    <button id="addBtn" class="primary" type="button">＋ 追加</button>
+    <button id="exportBtn" type="button">バックアップを書き出し</button>
+    <button id="importBtn" type="button">バックアップを読み込み</button>
+    <input type="file" id="importFile" accept="application/json" hidden>
+  </div>
+</header>
+
+<section class="toolbar">
+  <input type="search" id="searchInput" placeholder="キーワード検索（ブランド・アイテム名・メモなど）">
+  <div class="filters">
+    <select id="filterCategory">
+      <option value="">カテゴリ：すべて</option>
+      <option value="トップス">トップス</option>
+      <option value="ボトムス">ボトムス</option>
+      <option value="アウター">アウター</option>
+      <option value="シューズ">シューズ</option>
+      <option value="小物">小物</option>
+      <option value="その他">その他</option>
+    </select>
+    <select id="filterBrand"><option value="">ブランド：すべて</option></select>
+    <select id="filterCountry"><option value="">生産国：すべて</option></select>
+    <select id="filterEra"><option value="">年代：すべて</option></select>
+    <select id="filterLocation">
+      <option value="">購入場所：すべて</option>
+      <option value="ヤフオク">ヤフオク</option>
+      <option value="メルカリ">メルカリ</option>
+      <option value="店舗">店舗</option>
+      <option value="その他">その他</option>
+    </select>
+    <select id="sortSelect">
+      <option value="purchaseDate_desc">購入日が新しい順</option>
+      <option value="purchaseDate_asc">購入日が古い順</option>
+      <option value="brand_asc">ブランド名順</option>
+      <option value="purchasePrice_desc">購入価格が高い順</option>
+      <option value="purchasePrice_asc">購入価格が安い順</option>
+    </select>
+    <button id="resetFiltersBtn" type="button">条件をリセット</button>
+  </div>
+</section>
+
+<main>
+  <p id="emptyState" hidden>アイテムがまだ登録されていません。右上の「＋ 追加」から登録してください。</p>
+  <p id="resultCount"></p>
+  <div id="cardGrid" class="card-grid"></div>
+</main>
+
+<div id="detailModal" class="modal-overlay" hidden>
+  <div class="modal modal-large">
+    <button class="modal-close" data-close type="button">×</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<div id="formModal" class="modal-overlay" hidden>
+  <div class="modal modal-large">
+    <button class="modal-close" data-close type="button">×</button>
+    <h2 id="formTitle">アイテムを追加</h2>
+    <form id="itemForm">
+      <div class="form-group">
+        <label>写真（複数選択可。並び順の1枚目がサムネイルになります）</label>
+        <div class="photo-input-row">
+          <label class="photo-input-btn" for="cameraInput">📷 カメラで撮影</label>
+          <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+          <label class="photo-input-btn" for="photoInput">🖼 ギャラリーから選択</label>
+          <input type="file" id="photoInput" accept="image/*" multiple hidden>
+        </div>
+        <div id="photoPreviewList" class="photo-preview-list"></div>
+      </div>
+
+      <div class="form-grid" style="margin-top:16px;">
+        <div class="form-group">
+          <label for="brand">ブランド</label>
+          <input type="text" id="brand" name="brand">
+        </div>
+        <div class="form-group">
+          <label for="itemName">アイテム名</label>
+          <input type="text" id="itemName" name="itemName">
+        </div>
+        <div class="form-group">
+          <label for="category">カテゴリ</label>
+          <select id="category" name="category">
+            <option value="">選択してください</option>
+            <option value="トップス">トップス</option>
+            <option value="ボトムス">ボトムス</option>
+            <option value="アウター">アウター</option>
+            <option value="シューズ">シューズ</option>
+            <option value="小物">小物</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="sizeLabel">サイズ表記（タグ表記そのまま）</label>
+          <input type="text" id="sizeLabel" name="sizeLabel" placeholder="例：M / 38 / L相当">
+        </div>
+      </div>
+
+      <fieldset>
+        <legend>実寸（すべて空欄可・単位cm）</legend>
+        <div class="measure-grid">
+          <div class="form-group"><label for="m_length">着丈</label><input type="text" inputmode="decimal" id="m_length" name="m_length"></div>
+          <div class="form-group"><label for="m_chestWidth">身幅</label><input type="text" inputmode="decimal" id="m_chestWidth" name="m_chestWidth"></div>
+          <div class="form-group"><label for="m_shoulderWidth">肩幅</label><input type="text" inputmode="decimal" id="m_shoulderWidth" name="m_shoulderWidth"></div>
+          <div class="form-group"><label for="m_sleeveLength">袖丈</label><input type="text" inputmode="decimal" id="m_sleeveLength" name="m_sleeveLength"></div>
+          <div class="form-group"><label for="m_waist">ウエスト</label><input type="text" inputmode="decimal" id="m_waist" name="m_waist"></div>
+          <div class="form-group"><label for="m_inseam">股下</label><input type="text" inputmode="decimal" id="m_inseam" name="m_inseam"></div>
+          <div class="form-group"><label for="m_thigh">ワタリ</label><input type="text" inputmode="decimal" id="m_thigh" name="m_thigh"></div>
+          <div class="form-group"><label for="m_hem">裾幅</label><input type="text" inputmode="decimal" id="m_hem" name="m_hem"></div>
+        </div>
+      </fieldset>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="countryOfOrigin">生産国</label>
+          <input type="text" id="countryOfOrigin" name="countryOfOrigin">
+        </div>
+        <div class="form-group">
+          <label for="era">年代</label>
+          <input type="text" id="era" name="era" placeholder="例：1960s、1990年代、不明">
+        </div>
+        <div class="form-group full">
+          <label for="tagInfo">品番・タグ情報（品番、ボタン裏刻印、タグの種類など自由記述）</label>
+          <textarea id="tagInfo" name="tagInfo"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="condition">状態</label>
+          <input type="text" id="condition" name="condition" placeholder="例：良好、使用感あり など">
+        </div>
+        <div class="form-group">
+          <label for="purchaseDate">購入日</label>
+          <input type="date" id="purchaseDate" name="purchaseDate">
+        </div>
+        <div class="form-group">
+          <label for="purchasePrice">購入価格</label>
+          <input type="number" id="purchasePrice" name="purchasePrice" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label for="purchaseLocation">購入場所</label>
+          <select id="purchaseLocation" name="purchaseLocation">
+            <option value="">選択してください</option>
+            <option value="ヤフオク">ヤフオク</option>
+            <option value="メルカリ">メルカリ</option>
+            <option value="店舗">店舗</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="productUrl">商品URLまたはオークションID（任意）</label>
+          <input type="text" id="productUrl" name="productUrl">
+        </div>
+        <div class="form-group full">
+          <label for="memo">メモ</label>
+          <textarea id="memo" name="memo"></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" data-close>キャンセル</button>
+        <button type="submit" class="primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<button id="fabAddBtn" class="fab" type="button" aria-label="アイテムを追加">＋</button>
+
+<div id="toast" class="toast" hidden></div>
+
+<script>
+'use strict';
+
+/* ---------- IndexedDB ---------- */
+const DB_NAME = 'vintageWardrobeDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'items';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('brand', 'brand', { unique: false });
+        store.createIndex('category', 'category', { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+const dbPromise = openDB();
+
+async function dbGetAll() {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbPut(item) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const req = item.id ? tx.objectStore(STORE_NAME).put(item) : tx.objectStore(STORE_NAME).add(item);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbDelete(id) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbAddMany(items) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    items.forEach(item => {
+      const clone = { ...item };
+      delete clone.id;
+      store.add(clone);
+    });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/* ---------- state ---------- */
+let allItems = [];
+let currentEditId = null;
+let formPhotos = [];
+let cardThumbURLs = [];
+let formPreviewURLs = [];
+let detailURLs = [];
+
+const $ = (id) => document.getElementById(id);
+const cardGrid = $('cardGrid');
+const resultCount = $('resultCount');
+const emptyState = $('emptyState');
+const searchInput = $('searchInput');
+const filterCategory = $('filterCategory');
+const filterBrand = $('filterBrand');
+const filterCountry = $('filterCountry');
+const filterEra = $('filterEra');
+const filterLocation = $('filterLocation');
+const sortSelect = $('sortSelect');
+const detailModal = $('detailModal');
+const detailContent = $('detailContent');
+const formModal = $('formModal');
+const formTitle = $('formTitle');
+const itemForm = $('itemForm');
+const photoInput = $('photoInput');
+const photoPreviewList = $('photoPreviewList');
+const toast = $('toast');
+
+function escapeHTML(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ---------- rendering ---------- */
+function revokeCardThumbURLs() { cardThumbURLs.forEach(u => URL.revokeObjectURL(u)); cardThumbURLs = []; }
+function revokeFormPreviewURLs() { formPreviewURLs.forEach(u => URL.revokeObjectURL(u)); formPreviewURLs = []; }
+function revokeDetailURLs() { detailURLs.forEach(u => URL.revokeObjectURL(u)); detailURLs = []; }
+
+function uniqueSorted(arr) { return [...new Set(arr)].sort((a, b) => a.localeCompare(b, 'ja')); }
+
+function fillSelect(selectEl, values, placeholder) {
+  const current = selectEl.value;
+  selectEl.innerHTML = `<option value="">${placeholder}</option>` +
+    values.map(v => `<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`).join('');
+  if (values.includes(current)) selectEl.value = current;
+}
+
+function updateFilterOptions() {
+  fillSelect(filterBrand, uniqueSorted(allItems.map(i => i.brand).filter(Boolean)), 'ブランド：すべて');
+  fillSelect(filterCountry, uniqueSorted(allItems.map(i => i.countryOfOrigin).filter(Boolean)), '生産国：すべて');
+  fillSelect(filterEra, uniqueSorted(allItems.map(i => i.era).filter(Boolean)), '年代：すべて');
+}
+
+function getFilteredSortedItems() {
+  let items = [...allItems];
+  const kw = searchInput.value.trim().toLowerCase();
+  if (kw) {
+    items = items.filter(it =>
+      [it.brand, it.itemName, it.memo, it.tagInfo, it.era, it.sizeLabel, it.countryOfOrigin]
+        .filter(Boolean).some(f => f.toLowerCase().includes(kw))
+    );
+  }
+  if (filterCategory.value) items = items.filter(it => it.category === filterCategory.value);
+  if (filterBrand.value) items = items.filter(it => it.brand === filterBrand.value);
+  if (filterCountry.value) items = items.filter(it => it.countryOfOrigin === filterCountry.value);
+  if (filterEra.value) items = items.filter(it => it.era === filterEra.value);
+  if (filterLocation.value) items = items.filter(it => it.purchaseLocation === filterLocation.value);
+
+  const [sortKey, sortDir] = sortSelect.value.split('_');
+  items.sort((a, b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (sortKey === 'purchasePrice') { av = Number(av) || 0; bv = Number(bv) || 0; }
+    else { av = (av || '').toString().toLowerCase(); bv = (bv || '').toString().toLowerCase(); }
+    if (av < bv) return sortDir === 'asc' ? -1 : 1;
+    if (av > bv) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  return items;
+}
+
+function renderCards() {
+  revokeCardThumbURLs();
+  const items = getFilteredSortedItems();
+  cardGrid.innerHTML = '';
+  resultCount.textContent = allItems.length ? `${items.length}件 / 全${allItems.length}件` : '';
+  emptyState.hidden = allItems.length !== 0;
+
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.category = item.category || '';
+
+    let thumbHTML = '<div class="no-photo">No Photo</div>';
+    if (item.photos && item.photos[0]) {
+      const url = URL.createObjectURL(item.photos[0]);
+      cardThumbURLs.push(url);
+      thumbHTML = `<img src="${url}" alt="">`;
+    }
+
+    const metaParts = [];
+    if (item.sizeLabel) metaParts.push(`<span>${escapeHTML(item.sizeLabel)}</span>`);
+    if (item.purchasePrice) metaParts.push(`<span>¥${Number(item.purchasePrice).toLocaleString()}</span>`);
+
+    card.innerHTML = `
+      <div class="card-thumb">${thumbHTML}</div>
+      <div class="card-body">
+        ${item.category ? `<span class="card-category">${escapeHTML(item.category)}</span>` : ''}
+        <div class="card-brand">${escapeHTML(item.brand || '(ブランド未入力)')}</div>
+        <div class="card-name">${escapeHTML(item.itemName || '')}</div>
+        <div class="card-meta">${metaParts.join('')}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => openDetail(item.id));
+    cardGrid.appendChild(card);
+  });
+}
+
+/* ---------- detail modal ---------- */
+function openDetail(id) {
+  const item = allItems.find(i => i.id === id);
+  if (!item) return;
+  revokeDetailURLs();
+
+  const photosHTML = (item.photos || []).map(blob => {
+    const url = URL.createObjectURL(blob);
+    detailURLs.push(url);
+    return `<img src="${url}" class="detail-photo" alt="">`;
+  }).join('');
+
+  const rows = [
+    ['ブランド', item.brand],
+    ['アイテム名', item.itemName],
+    ['カテゴリ', item.category],
+    ['サイズ表記', item.sizeLabel],
+    ['生産国', item.countryOfOrigin],
+    ['年代', item.era],
+    ['状態', item.condition],
+    ['購入日', item.purchaseDate],
+    ['購入価格', item.purchasePrice ? `¥${Number(item.purchasePrice).toLocaleString()}` : ''],
+    ['購入場所', item.purchaseLocation],
+    ['商品URL/オークションID', item.productUrl],
+  ].filter(([, v]) => v);
+
+  const measureLabels = [
+    ['m_length', '着丈'], ['m_chestWidth', '身幅'], ['m_shoulderWidth', '肩幅'], ['m_sleeveLength', '袖丈'],
+    ['m_waist', 'ウエスト'], ['m_inseam', '股下'], ['m_thigh', 'ワタリ'], ['m_hem', '裾幅']
+  ];
+  const measureHTML = measureLabels
+    .filter(([k]) => item[k])
+    .map(([k, label]) => `<div class="measure-item"><span>${label}</span><b>${escapeHTML(item[k])}cm</b></div>`)
+    .join('');
+
+  detailContent.innerHTML = `
+    <div class="detail-photos">${photosHTML || '<div class="no-photo">No Photo</div>'}</div>
+    <h2>${escapeHTML(item.brand || '')} ${escapeHTML(item.itemName || '')}</h2>
+    <div class="detail-rows">
+      ${rows.map(([l, v]) => `<div class="detail-row"><span class="detail-label">${l}</span><span>${escapeHTML(String(v))}</span></div>`).join('')}
+    </div>
+    ${measureHTML ? `<h3>実寸</h3><div class="measure-grid">${measureHTML}</div>` : ''}
+    ${item.tagInfo ? `<h3>品番・タグ情報</h3><p class="pre-wrap">${escapeHTML(item.tagInfo)}</p>` : ''}
+    ${item.memo ? `<h3>メモ</h3><p class="pre-wrap">${escapeHTML(item.memo)}</p>` : ''}
+    <div class="detail-actions">
+      <button id="editFromDetailBtn" type="button" class="primary">編集</button>
+      <button id="deleteFromDetailBtn" type="button" class="danger">削除</button>
+    </div>
+  `;
+  $('editFromDetailBtn').addEventListener('click', () => { closeModal(detailModal); openForm(item.id); });
+  $('deleteFromDetailBtn').addEventListener('click', () => { deleteItem(item.id); closeModal(detailModal); });
+  openModal(detailModal);
+}
+
+/* ---------- form (add / edit) ---------- */
+// applyItemDataToForm は「アイテムのデータをフォームに流し込む」唯一の入口にしてある。
+// 将来、ヤフオク/メルカリの商品ページ文章を解析してこの関数に渡せば、
+// 編集画面と同じ仕組みのまま自動入力機能を追加できる。
+function applyItemDataToForm(data) {
+  const fields = ['brand', 'itemName', 'category', 'sizeLabel', 'm_length', 'm_chestWidth',
+    'm_shoulderWidth', 'm_sleeveLength', 'm_waist', 'm_inseam', 'm_thigh', 'm_hem',
+    'countryOfOrigin', 'era', 'tagInfo', 'condition', 'purchaseDate', 'purchasePrice',
+    'purchaseLocation', 'productUrl', 'memo'];
+  fields.forEach(f => { itemForm[f].value = data[f] || ''; });
+}
+
+function readFormToItem() {
+  const fd = new FormData(itemForm);
+  const item = {};
+  for (const [k, v] of fd.entries()) item[k] = typeof v === 'string' ? v.trim() : v;
+  return item;
+}
+
+function openForm(id = null) {
+  currentEditId = id;
+  revokeFormPreviewURLs();
+  itemForm.reset();
+
+  if (id) {
+    const item = allItems.find(i => i.id === id);
+    formTitle.textContent = 'アイテムを編集';
+    applyItemDataToForm(item);
+    formPhotos = item.photos ? [...item.photos] : [];
+  } else {
+    formTitle.textContent = 'アイテムを追加';
+    formPhotos = [];
+  }
+  renderPhotoPreview();
+  openModal(formModal);
+}
+
+function handlePhotoFiles(fileList) {
+  formPhotos.push(...Array.from(fileList));
+  renderPhotoPreview();
+}
+photoInput.addEventListener('change', (e) => {
+  handlePhotoFiles(e.target.files);
+  photoInput.value = '';
+});
+$('cameraInput').addEventListener('change', (e) => {
+  handlePhotoFiles(e.target.files);
+  e.target.value = '';
+});
+
+function renderPhotoPreview() {
+  revokeFormPreviewURLs();
+  photoPreviewList.innerHTML = '';
+  formPhotos.forEach((blob, idx) => {
+    const url = URL.createObjectURL(blob);
+    formPreviewURLs.push(url);
+    const div = document.createElement('div');
+    div.className = 'photo-preview-item';
+    div.innerHTML = `
+      <img src="${url}" alt="">
+      ${idx === 0 ? '<span class="thumb-badge">サムネイル</span>' : ''}
+      <div class="photo-preview-controls">
+        <button type="button" data-action="up" ${idx === 0 ? 'disabled' : ''}>↑</button>
+        <button type="button" data-action="down" ${idx === formPhotos.length - 1 ? 'disabled' : ''}>↓</button>
+        <button type="button" data-action="remove">削除</button>
+      </div>
+    `;
+    div.querySelector('[data-action="up"]').addEventListener('click', () => {
+      [formPhotos[idx - 1], formPhotos[idx]] = [formPhotos[idx], formPhotos[idx - 1]];
+      renderPhotoPreview();
+    });
+    div.querySelector('[data-action="down"]').addEventListener('click', () => {
+      [formPhotos[idx + 1], formPhotos[idx]] = [formPhotos[idx], formPhotos[idx + 1]];
+      renderPhotoPreview();
+    });
+    div.querySelector('[data-action="remove"]').addEventListener('click', () => {
+      formPhotos.splice(idx, 1);
+      renderPhotoPreview();
+    });
+    photoPreviewList.appendChild(div);
+  });
+}
+
+itemForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const item = readFormToItem();
+  item.photos = formPhotos;
+  if (currentEditId) {
+    item.id = currentEditId;
+    const existing = allItems.find(i => i.id === currentEditId);
+    item.createdAt = existing ? existing.createdAt : Date.now();
+  } else {
+    item.createdAt = Date.now();
+  }
+  item.updatedAt = Date.now();
+  await dbPut(item);
+  await reloadItems();
+  closeModal(formModal);
+  showToast(currentEditId ? '更新しました' : '追加しました');
+});
+
+async function deleteItem(id) {
+  if (!confirm('このアイテムを削除しますか？この操作は取り消せません。')) return;
+  await dbDelete(id);
+  await reloadItems();
+  showToast('削除しました');
+}
+
+/* ---------- backup: export / import ---------- */
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+async function dataURLToBlob(dataURL) {
+  const res = await fetch(dataURL);
+  return res.blob();
+}
+
+$('exportBtn').addEventListener('click', async () => {
+  const items = await dbGetAll();
+  const exportItems = await Promise.all(items.map(async item => {
+    const photos = await Promise.all((item.photos || []).map(blobToDataURL));
+    return { ...item, photos };
+  }));
+  const payload = {
+    appName: 'vintage-wardrobe',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    items: exportItems
+  };
+  const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `wardrobe-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('バックアップを書き出しました');
+});
+
+$('importBtn').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    if (!Array.isArray(payload.items)) throw new Error('invalid format');
+    const converted = await Promise.all(payload.items.map(async item => {
+      const photos = await Promise.all((item.photos || []).map(dataURLToBlob));
+      const clone = { ...item, photos };
+      delete clone.id;
+      return clone;
+    }));
+    if (!confirm(`${converted.length}件のアイテムを読み込みます。既存データに追加されます。よろしいですか？`)) return;
+    await dbAddMany(converted);
+    await reloadItems();
+    showToast(`${converted.length}件のアイテムを読み込みました`);
+  } catch (err) {
+    console.error(err);
+    alert('ファイルの読み込みに失敗しました。正しいバックアップファイルか確認してください。');
+  } finally {
+    e.target.value = '';
+  }
+});
+
+/* ---------- modal helpers ---------- */
+function openModal(modal) { modal.hidden = false; document.body.style.overflow = 'hidden'; }
+function closeModal(modal) {
+  modal.hidden = true;
+  document.body.style.overflow = '';
+  if (modal === formModal) revokeFormPreviewURLs();
+  if (modal === detailModal) revokeDetailURLs();
+}
+document.querySelectorAll('[data-close]').forEach(btn =>
+  btn.addEventListener('click', (e) => closeModal(e.target.closest('.modal-overlay')))
+);
+document.querySelectorAll('.modal-overlay').forEach(overlay =>
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(overlay); })
+);
+
+/* ---------- toast ---------- */
+let toastTimer;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.hidden = true; }, 2500);
+}
+
+/* ---------- events / init ---------- */
+$('addBtn').addEventListener('click', () => openForm(null));
+$('fabAddBtn').addEventListener('click', () => openForm(null));
+searchInput.addEventListener('input', renderCards);
+[filterCategory, filterBrand, filterCountry, filterEra, filterLocation, sortSelect]
+  .forEach(el => el.addEventListener('change', renderCards));
+$('resetFiltersBtn').addEventListener('click', () => {
+  searchInput.value = '';
+  filterCategory.value = '';
+  filterBrand.value = '';
+  filterCountry.value = '';
+  filterEra.value = '';
+  filterLocation.value = '';
+  sortSelect.value = 'purchaseDate_desc';
+  renderCards();
+});
+
+async function reloadItems() {
+  allItems = await dbGetAll();
+  updateFilterOptions();
+  renderCards();
+}
+
+reloadItems();
+
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persisted().then(already => {
+    if (!already) navigator.storage.persist();
+  });
+}
+</script>
+</body>
+</html>
