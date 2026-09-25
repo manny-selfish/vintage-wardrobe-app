@@ -382,6 +382,7 @@
           <div class="form-group"><label for="m_chestWidth">身幅</label><input type="text" inputmode="decimal" id="m_chestWidth" name="m_chestWidth"></div>
           <div class="form-group"><label for="m_shoulderWidth">肩幅</label><input type="text" inputmode="decimal" id="m_shoulderWidth" name="m_shoulderWidth"></div>
           <div class="form-group"><label for="m_sleeveLength">袖丈</label><input type="text" inputmode="decimal" id="m_sleeveLength" name="m_sleeveLength"></div>
+          <div class="form-group"><label for="m_yukitake">裄丈（ラグラン等）</label><input type="text" inputmode="decimal" id="m_yukitake" name="m_yukitake"></div>
           <div class="form-group"><label for="m_waist">ウエスト</label><input type="text" inputmode="decimal" id="m_waist" name="m_waist"></div>
           <div class="form-group"><label for="m_inseam">股下</label><input type="text" inputmode="decimal" id="m_inseam" name="m_inseam"></div>
           <div class="form-group"><label for="m_thigh">ワタリ</label><input type="text" inputmode="decimal" id="m_thigh" name="m_thigh"></div>
@@ -680,7 +681,7 @@ function openDetail(id) {
 
   const measureLabels = [
     ['m_length', '着丈'], ['m_chestWidth', '身幅'], ['m_shoulderWidth', '肩幅'], ['m_sleeveLength', '袖丈'],
-    ['m_waist', 'ウエスト'], ['m_inseam', '股下'], ['m_thigh', 'ワタリ'], ['m_hem', '裾幅']
+    ['m_yukitake', '裄丈'], ['m_waist', 'ウエスト'], ['m_inseam', '股下'], ['m_thigh', 'ワタリ'], ['m_hem', '裾幅']
   ];
   const measureHTML = measureLabels
     .filter(([k]) => item[k])
@@ -712,7 +713,7 @@ function openDetail(id) {
 // 編集画面と同じ仕組みのまま自動入力機能を追加できる。
 function applyItemDataToForm(data) {
   const fields = ['brand', 'itemName', 'category', 'sizeLabel', 'm_length', 'm_chestWidth',
-    'm_shoulderWidth', 'm_sleeveLength', 'm_waist', 'm_inseam', 'm_thigh', 'm_hem',
+    'm_shoulderWidth', 'm_sleeveLength', 'm_yukitake', 'm_waist', 'm_inseam', 'm_thigh', 'm_hem',
     'countryOfOrigin', 'era', 'tagInfo', 'condition', 'purchaseDate', 'purchasePrice',
     'purchaseLocation', 'productUrl', 'memo'];
   fields.forEach(f => { itemForm[f].value = data[f] || ''; });
