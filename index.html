@@ -686,12 +686,7 @@ function openDetail(id) {
     ['商品URL/オークションID', item.productUrl],
   ].filter(([, v]) => v);
 
-  const measureLabels = [
-    ['m_length', '着丈'], ['m_chestWidth', '身幅'], ['m_shoulderWidth', '肩幅'], ['m_sleeveLength', '袖丈'],
-    ['m_yukitake', '裄丈'], ['m_waist', 'ウエスト'], ['m_hip', 'ヒップ'], ['m_rise', '股上'], ['m_inseam', '股下'], ['m_thigh', 'ワタリ'], ['m_hem', '裾幅'],
-    ['m_footLength', '足長'], ['m_footWidth', '足幅']
-  ];
-  const measureHTML = measureLabels
+  const measureHTML = MEASURE_LABELS
     .filter(([k]) => item[k])
     .map(([k, label]) => `<div class="measure-item"><span>${label}</span><b>${escapeHTML(item[k])}cm</b></div>`)
     .join('');
@@ -707,10 +702,12 @@ function openDetail(id) {
     ${item.memo ? `<h3>メモ</h3><p class="pre-wrap">${escapeHTML(item.memo)}</p>` : ''}
     <div class="detail-actions">
       <button id="editFromDetailBtn" type="button" class="primary">編集</button>
+      <button id="copyListingBtn" type="button">出品用テキストをコピー</button>
       <button id="deleteFromDetailBtn" type="button" class="danger">削除</button>
     </div>
   `;
   $('editFromDetailBtn').addEventListener('click', () => { closeModal(detailModal); openForm(item.id); });
+  $('copyListingBtn').addEventListener('click', () => copyListingText(item));
   $('deleteFromDetailBtn').addEventListener('click', () => { deleteItem(item.id); closeModal(detailModal); });
   openModal(detailModal);
 }
@@ -727,6 +724,12 @@ function applyItemDataToForm(data) {
     'purchaseLocation', 'productUrl', 'memo'];
   fields.forEach(f => { itemForm[f].value = data[f] || ''; });
 }
+
+const MEASURE_LABELS = [
+  ['m_length', '着丈'], ['m_chestWidth', '身幅'], ['m_shoulderWidth', '肩幅'], ['m_sleeveLength', '袖丈'],
+  ['m_yukitake', '裄丈'], ['m_waist', 'ウエスト'], ['m_hip', 'ヒップ'], ['m_rise', '股上'], ['m_inseam', '股下'], ['m_thigh', 'ワタリ'], ['m_hem', '裾幅'],
+  ['m_footLength', '足長'], ['m_footWidth', '足幅']
+];
 
 /* ---------- category-aware measurement fields ---------- */
 const CATEGORY_MEASUREMENTS = {
@@ -760,6 +763,49 @@ function updateCategoryAwareFields() {
   itemForm.sizeLabel.placeholder = SIZE_LABEL_PLACEHOLDERS[cat] || '例：M / 38 / L相当';
 }
 itemForm.category.addEventListener('change', updateCategoryAwareFields);
+
+/* ---------- listing text (フリマ出品用) ----------
+   購入価格・購入日・購入場所・商品URL・メモは自分用の記録なので、
+   買い手向けの出品文には含めない。 */
+function buildListingText(item) {
+  const blocks = [];
+
+  const title = [item.brand, item.itemName].filter(Boolean).join(' ');
+  if (title) blocks.push(title);
+
+  const metaLine = [item.category, item.sizeLabel ? `サイズ表記：${item.sizeLabel}` : ''].filter(Boolean).join(' / ');
+  if (metaLine) blocks.push(metaLine);
+
+  const relevantKeys = Object.prototype.hasOwnProperty.call(CATEGORY_MEASUREMENTS, item.category)
+    ? CATEGORY_MEASUREMENTS[item.category] : null;
+  const measureLines = MEASURE_LABELS
+    .filter(([k]) => (relevantKeys === null || relevantKeys.includes(k)) && item[k])
+    .map(([k, label]) => `${label}：約${item[k]}cm`);
+  if (measureLines.length) {
+    blocks.push(['【実寸】', ...measureLines, '※素人採寸のため多少の誤差はご了承ください'].join('\n'));
+  }
+
+  const infoLines = [];
+  if (item.countryOfOrigin) infoLines.push(`生産国：${item.countryOfOrigin}`);
+  if (item.era) infoLines.push(`年代：${item.era}`);
+  if (item.condition) infoLines.push(`状態：${item.condition}`);
+  if (infoLines.length) blocks.push(infoLines.join('\n'));
+
+  if (item.tagInfo) blocks.push(`【品番・タグ情報】\n${item.tagInfo}`);
+
+  return blocks.join('\n\n');
+}
+
+async function copyListingText(item) {
+  const text = buildListingText(item);
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('出品用テキストをコピーしました');
+  } catch (err) {
+    console.error('clipboard write failed', err);
+    prompt('コピーに失敗しました。以下のテキストを手動で選択してコピーしてください：', text);
+  }
+}
 
 function readFormToItem() {
   const fd = new FormData(itemForm);
