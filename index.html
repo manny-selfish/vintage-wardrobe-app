@@ -401,6 +401,11 @@
           <input type="text" id="countryOfOrigin" name="countryOfOrigin">
         </div>
         <div class="form-group">
+          <label for="material">素材</label>
+          <input type="text" id="material" name="material" list="materialDatalist" autocomplete="off" placeholder="例：コットン100%、ポリエステル混">
+          <datalist id="materialDatalist"></datalist>
+        </div>
+        <div class="form-group">
           <label for="era">年代</label>
           <input type="text" id="era" name="era" placeholder="例：1960s、1990年代、不明">
         </div>
@@ -596,10 +601,12 @@ function fillSelect(selectEl, values, placeholder) {
 
 function updateFilterOptions() {
   const brands = uniqueSorted(allItems.map(i => i.brand).filter(Boolean));
+  const materials = uniqueSorted(allItems.map(i => i.material).filter(Boolean));
   fillSelect(filterBrand, brands, 'ブランド：すべて');
   fillSelect(filterCountry, uniqueSorted(allItems.map(i => i.countryOfOrigin).filter(Boolean)), '生産国：すべて');
   fillSelect(filterEra, uniqueSorted(allItems.map(i => i.era).filter(Boolean)), '年代：すべて');
   $('brandDatalist').innerHTML = brands.map(b => `<option value="${escapeHTML(b)}">`).join('');
+  $('materialDatalist').innerHTML = materials.map(m => `<option value="${escapeHTML(m)}">`).join('');
 }
 
 function getFilteredSortedItems() {
@@ -607,7 +614,7 @@ function getFilteredSortedItems() {
   const kw = searchInput.value.trim().toLowerCase();
   if (kw) {
     items = items.filter(it =>
-      [it.brand, it.itemName, it.memo, it.tagInfo, it.era, it.sizeLabel, it.countryOfOrigin]
+      [it.brand, it.itemName, it.memo, it.tagInfo, it.era, it.sizeLabel, it.countryOfOrigin, it.material]
         .filter(Boolean).some(f => f.toLowerCase().includes(kw))
     );
   }
@@ -678,6 +685,7 @@ function openDetail(id) {
     ['カテゴリ', item.category],
     ['サイズ表記', item.sizeLabel],
     ['生産国', item.countryOfOrigin],
+    ['素材', item.material],
     ['年代', item.era],
     ['状態', item.condition],
     ['購入日', item.purchaseDate],
@@ -720,7 +728,7 @@ function applyItemDataToForm(data) {
   const fields = ['brand', 'itemName', 'category', 'sizeLabel', 'm_length', 'm_chestWidth',
     'm_shoulderWidth', 'm_sleeveLength', 'm_yukitake', 'm_waist', 'm_hip', 'm_rise', 'm_inseam', 'm_thigh', 'm_hem',
     'm_footLength', 'm_footWidth',
-    'countryOfOrigin', 'era', 'tagInfo', 'condition', 'purchaseDate', 'purchasePrice',
+    'countryOfOrigin', 'material', 'era', 'tagInfo', 'condition', 'purchaseDate', 'purchasePrice',
     'purchaseLocation', 'productUrl', 'memo'];
   fields.forEach(f => { itemForm[f].value = data[f] || ''; });
 }
@@ -787,6 +795,7 @@ function buildListingText(item) {
 
   const infoLines = [];
   if (item.countryOfOrigin) infoLines.push(`生産国：${item.countryOfOrigin}`);
+  if (item.material) infoLines.push(`素材：${item.material}`);
   if (item.era) infoLines.push(`年代：${item.era}`);
   if (item.condition) infoLines.push(`状態：${item.condition}`);
   if (infoLines.length) blocks.push(infoLines.join('\n'));
