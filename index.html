@@ -375,18 +375,21 @@
         </div>
       </div>
 
-      <fieldset>
+      <fieldset id="measureFieldset">
         <legend>実寸（すべて空欄可・単位cm）</legend>
-        <div class="measure-grid">
-          <div class="form-group"><label for="m_length">着丈</label><input type="text" inputmode="decimal" id="m_length" name="m_length"></div>
-          <div class="form-group"><label for="m_chestWidth">身幅</label><input type="text" inputmode="decimal" id="m_chestWidth" name="m_chestWidth"></div>
-          <div class="form-group"><label for="m_shoulderWidth">肩幅</label><input type="text" inputmode="decimal" id="m_shoulderWidth" name="m_shoulderWidth"></div>
-          <div class="form-group"><label for="m_sleeveLength">袖丈</label><input type="text" inputmode="decimal" id="m_sleeveLength" name="m_sleeveLength"></div>
-          <div class="form-group"><label for="m_yukitake">裄丈（ラグラン等）</label><input type="text" inputmode="decimal" id="m_yukitake" name="m_yukitake"></div>
-          <div class="form-group"><label for="m_waist">ウエスト</label><input type="text" inputmode="decimal" id="m_waist" name="m_waist"></div>
-          <div class="form-group"><label for="m_inseam">股下</label><input type="text" inputmode="decimal" id="m_inseam" name="m_inseam"></div>
-          <div class="form-group"><label for="m_thigh">ワタリ</label><input type="text" inputmode="decimal" id="m_thigh" name="m_thigh"></div>
-          <div class="form-group"><label for="m_hem">裾幅</label><input type="text" inputmode="decimal" id="m_hem" name="m_hem"></div>
+        <div class="measure-grid" id="measureGrid">
+          <div class="form-group" data-cat-field="m_length"><label for="m_length">着丈</label><input type="text" inputmode="decimal" id="m_length" name="m_length"></div>
+          <div class="form-group" data-cat-field="m_chestWidth"><label for="m_chestWidth">身幅</label><input type="text" inputmode="decimal" id="m_chestWidth" name="m_chestWidth"></div>
+          <div class="form-group" data-cat-field="m_shoulderWidth"><label for="m_shoulderWidth">肩幅</label><input type="text" inputmode="decimal" id="m_shoulderWidth" name="m_shoulderWidth"></div>
+          <div class="form-group" data-cat-field="m_sleeveLength"><label for="m_sleeveLength">袖丈</label><input type="text" inputmode="decimal" id="m_sleeveLength" name="m_sleeveLength"></div>
+          <div class="form-group" data-cat-field="m_yukitake"><label for="m_yukitake">裄丈（ラグラン等）</label><input type="text" inputmode="decimal" id="m_yukitake" name="m_yukitake"></div>
+          <div class="form-group" data-cat-field="m_waist"><label for="m_waist">ウエスト</label><input type="text" inputmode="decimal" id="m_waist" name="m_waist"></div>
+          <div class="form-group" data-cat-field="m_rise"><label for="m_rise">股上</label><input type="text" inputmode="decimal" id="m_rise" name="m_rise"></div>
+          <div class="form-group" data-cat-field="m_inseam"><label for="m_inseam">股下</label><input type="text" inputmode="decimal" id="m_inseam" name="m_inseam"></div>
+          <div class="form-group" data-cat-field="m_thigh"><label for="m_thigh">ワタリ</label><input type="text" inputmode="decimal" id="m_thigh" name="m_thigh"></div>
+          <div class="form-group" data-cat-field="m_hem"><label for="m_hem">裾幅</label><input type="text" inputmode="decimal" id="m_hem" name="m_hem"></div>
+          <div class="form-group" data-cat-field="m_footLength"><label for="m_footLength">足長（インソール実寸）</label><input type="text" inputmode="decimal" id="m_footLength" name="m_footLength"></div>
+          <div class="form-group" data-cat-field="m_footWidth"><label for="m_footWidth">足幅</label><input type="text" inputmode="decimal" id="m_footWidth" name="m_footWidth"></div>
         </div>
       </fieldset>
 
@@ -681,7 +684,8 @@ function openDetail(id) {
 
   const measureLabels = [
     ['m_length', '着丈'], ['m_chestWidth', '身幅'], ['m_shoulderWidth', '肩幅'], ['m_sleeveLength', '袖丈'],
-    ['m_yukitake', '裄丈'], ['m_waist', 'ウエスト'], ['m_inseam', '股下'], ['m_thigh', 'ワタリ'], ['m_hem', '裾幅']
+    ['m_yukitake', '裄丈'], ['m_waist', 'ウエスト'], ['m_rise', '股上'], ['m_inseam', '股下'], ['m_thigh', 'ワタリ'], ['m_hem', '裾幅'],
+    ['m_footLength', '足長'], ['m_footWidth', '足幅']
   ];
   const measureHTML = measureLabels
     .filter(([k]) => item[k])
@@ -713,11 +717,44 @@ function openDetail(id) {
 // 編集画面と同じ仕組みのまま自動入力機能を追加できる。
 function applyItemDataToForm(data) {
   const fields = ['brand', 'itemName', 'category', 'sizeLabel', 'm_length', 'm_chestWidth',
-    'm_shoulderWidth', 'm_sleeveLength', 'm_yukitake', 'm_waist', 'm_inseam', 'm_thigh', 'm_hem',
+    'm_shoulderWidth', 'm_sleeveLength', 'm_yukitake', 'm_waist', 'm_rise', 'm_inseam', 'm_thigh', 'm_hem',
+    'm_footLength', 'm_footWidth',
     'countryOfOrigin', 'era', 'tagInfo', 'condition', 'purchaseDate', 'purchasePrice',
     'purchaseLocation', 'productUrl', 'memo'];
   fields.forEach(f => { itemForm[f].value = data[f] || ''; });
 }
+
+/* ---------- category-aware measurement fields ---------- */
+const CATEGORY_MEASUREMENTS = {
+  'トップス': ['m_length', 'm_chestWidth', 'm_shoulderWidth', 'm_sleeveLength', 'm_yukitake'],
+  'アウター': ['m_length', 'm_chestWidth', 'm_shoulderWidth', 'm_sleeveLength', 'm_yukitake'],
+  'ボトムス': ['m_length', 'm_waist', 'm_rise', 'm_inseam', 'm_thigh', 'm_hem'],
+  'シューズ': ['m_footLength', 'm_footWidth'],
+  '小物': []
+};
+const SIZE_LABEL_PLACEHOLDERS = {
+  'トップス': '例：M / 38 / L相当',
+  'アウター': '例：M / 38 / L相当',
+  'ボトムス': '例：W32 / 32inch / M相当',
+  'シューズ': '例：US9 / 27cm / 26.5cm',
+  '小物': '例：フリーサイズ / ONE SIZE'
+};
+const measureFieldset = $('measureFieldset');
+const measureGrid = $('measureGrid');
+
+function updateCategoryAwareFields() {
+  const cat = itemForm.category.value;
+  const visibleFields = Object.prototype.hasOwnProperty.call(CATEGORY_MEASUREMENTS, cat) ? CATEGORY_MEASUREMENTS[cat] : null;
+  let anyVisible = false;
+  measureGrid.querySelectorAll('[data-cat-field]').forEach(group => {
+    const show = visibleFields === null || visibleFields.includes(group.dataset.catField);
+    group.style.display = show ? '' : 'none';
+    if (show) anyVisible = true;
+  });
+  measureFieldset.hidden = !anyVisible;
+  itemForm.sizeLabel.placeholder = SIZE_LABEL_PLACEHOLDERS[cat] || '例：M / 38 / L相当';
+}
+itemForm.category.addEventListener('change', updateCategoryAwareFields);
 
 function readFormToItem() {
   const fd = new FormData(itemForm);
@@ -740,6 +777,7 @@ function openForm(id = null) {
     formTitle.textContent = 'アイテムを追加';
     formPhotos = [];
   }
+  updateCategoryAwareFields();
   renderPhotoPreview();
   openModal(formModal);
 }
