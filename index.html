@@ -479,7 +479,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut
+  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -547,17 +547,19 @@ function escapeHTML(str) {
 }
 
 /* ---------- auth ---------- */
-$('googleSignInBtn').addEventListener('click', () => {
+$('googleSignInBtn').addEventListener('click', async () => {
   loginError.hidden = true;
-  signInWithRedirect(auth, googleProvider);
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch (err) {
+    console.error(err);
+    if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+      loginError.textContent = 'ログインに失敗しました: ' + err.message;
+      loginError.hidden = false;
+    }
+  }
 });
 $('signOutBtn').addEventListener('click', () => signOut(auth));
-
-getRedirectResult(auth).catch(err => {
-  console.error(err);
-  loginError.textContent = 'ログインに失敗しました: ' + err.message;
-  loginError.hidden = false;
-});
 
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
