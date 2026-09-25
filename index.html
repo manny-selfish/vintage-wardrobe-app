@@ -239,6 +239,17 @@
 
   .fab { display: none; }
 
+  body:not(.logged-in) .app-shell { display: none !important; }
+
+  .loading-screen, .login-screen {
+    min-height: 100vh; align-items: center; justify-content: center;
+    flex-direction: column; gap: 14px; padding: 24px; text-align: center;
+  }
+  .loading-screen:not([hidden]), .login-screen:not([hidden]) { display: flex; }
+  .login-screen p { color: var(--text-sub); margin: 0; max-width: 320px; }
+  .login-screen .logo-mark-lg { width: 64px; height: 64px; }
+  .user-avatar { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); }
+
   @media (max-width: 560px) {
     .form-grid { grid-template-columns: 1fr; }
     .filters { flex-direction: column; align-items: stretch; }
@@ -259,7 +270,30 @@
 </head>
 <body>
 
-<header class="app-header">
+<div id="loadingScreen" class="loading-screen">
+  <svg width="48" height="48" viewBox="0 0 100 100" aria-hidden="true">
+    <path d="M50,38 Q44,34 50,30 Q56,26 50,22 Q44,18 50,15" fill="none" stroke="#7a4b32" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="50" cy="40" r="4.5" fill="#7a4b32"/>
+    <path d="M50,40 Q34,50 18,64" fill="none" stroke="#7a4b32" stroke-width="5" stroke-linecap="round"/>
+    <path d="M50,40 Q66,50 82,64" fill="none" stroke="#7a4b32" stroke-width="5" stroke-linecap="round"/>
+  </svg>
+  <p>読み込み中…</p>
+</div>
+
+<div id="loginScreen" class="login-screen" hidden>
+  <svg class="logo-mark-lg" viewBox="0 0 100 100" aria-hidden="true">
+    <path d="M50,38 Q44,34 50,30 Q56,26 50,22 Q44,18 50,15" fill="none" stroke="#7a4b32" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="50" cy="40" r="4.5" fill="#7a4b32"/>
+    <path d="M50,40 Q34,50 18,64" fill="none" stroke="#7a4b32" stroke-width="5" stroke-linecap="round"/>
+    <path d="M50,40 Q66,50 82,64" fill="none" stroke="#7a4b32" stroke-width="5" stroke-linecap="round"/>
+  </svg>
+  <h1>Hang-Up</h1>
+  <p>Googleアカウントでログインすると、どの端末からでも同じ記録を見られるようになります。</p>
+  <button id="googleSignInBtn" class="primary" type="button">Googleでログイン</button>
+  <p id="loginError" style="color:var(--danger);" hidden></p>
+</div>
+
+<header class="app-header app-shell">
   <h1>
     <svg class="logo-mark" width="26" height="26" viewBox="0 0 100 100" aria-hidden="true">
       <rect width="100" height="100" rx="22" fill="#7a4b32"/>
@@ -275,10 +309,12 @@
     <button id="exportBtn" type="button">バックアップを書き出し</button>
     <button id="importBtn" type="button">バックアップを読み込み</button>
     <input type="file" id="importFile" accept="application/json" hidden>
+    <img id="userAvatar" class="user-avatar" alt="" hidden>
+    <button id="signOutBtn" type="button">ログアウト</button>
   </div>
 </header>
 
-<section class="toolbar">
+<section class="toolbar app-shell">
   <input type="search" id="searchInput" placeholder="キーワード検索（ブランド・アイテム名・メモなど）">
   <div class="filters">
     <select id="filterCategory">
@@ -311,7 +347,7 @@
   </div>
 </section>
 
-<main>
+<main class="app-shell">
   <p id="emptyState" hidden>アイテムがまだ登録されていません。右上の「＋ 追加」から登録してください。</p>
   <p id="resultCount"></p>
   <div id="cardGrid" class="card-grid"></div>
@@ -434,89 +470,59 @@
   </div>
 </div>
 
-<button id="fabAddBtn" class="fab" type="button" aria-label="アイテムを追加">＋</button>
+<button id="fabAddBtn" class="fab app-shell" type="button" aria-label="アイテムを追加">＋</button>
 
 <div id="toast" class="toast" hidden></div>
 
-<script>
+<script type="module">
 'use strict';
 
-/* ---------- IndexedDB ---------- */
-const DB_NAME = 'vintageWardrobeDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'items';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import {
+  getStorage, ref, uploadBytes, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
 
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-        store.createIndex('brand', 'brand', { unique: false });
-        store.createIndex('category', 'category', { unique: false });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-const dbPromise = openDB();
+/* ---------- Firebase ----------
+   apiKey はブラウザに埋め込まれる前提の識別子で、秘密情報ではない。
+   実際のアクセス制御は firestore.rules / storage.rules 側の
+   「request.auth.uid が一致する本人のみ」というルールで行っている。 */
+const firebaseConfig = {
+  projectId: "hang-up-bcc08",
+  appId: "1:680223982625:web:61b0bff431158ec82e0f60",
+  storageBucket: "hang-up-bcc08.firebasestorage.app",
+  apiKey: "AIzaSyAvNXTfShZnMkXO0URZqf6elmxIRQn7hCg",
+  authDomain: "hang-up-bcc08.firebaseapp.com",
+  messagingSenderId: "680223982625"
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = initializeFirestore(firebaseApp, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
+const storage = getStorage(firebaseApp);
+const googleProvider = new GoogleAuthProvider();
 
-async function dbGetAll() {
-  const db = await dbPromise;
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORE_NAME).getAll();
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function dbPut(item) {
-  const db = await dbPromise;
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const req = item.id ? tx.objectStore(STORE_NAME).put(item) : tx.objectStore(STORE_NAME).add(item);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function dbDelete(id) {
-  const db = await dbPromise;
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function dbAddMany(items) {
-  const db = await dbPromise;
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    items.forEach(item => {
-      const clone = { ...item };
-      delete clone.id;
-      store.add(clone);
-    });
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
+let currentUser = null;
+let unsubscribeItems = null;
 
 /* ---------- state ---------- */
 let allItems = [];
 let currentEditId = null;
 let formPhotos = [];
-let cardThumbURLs = [];
 let formPreviewURLs = [];
-let detailURLs = [];
 
 const $ = (id) => document.getElementById(id);
+const loadingScreen = $('loadingScreen');
+const loginScreen = $('loginScreen');
+const loginError = $('loginError');
+const userAvatar = $('userAvatar');
 const cardGrid = $('cardGrid');
 const resultCount = $('resultCount');
 const emptyState = $('emptyState');
@@ -540,10 +546,53 @@ function escapeHTML(str) {
   return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/* ---------- auth ---------- */
+$('googleSignInBtn').addEventListener('click', () => {
+  loginError.hidden = true;
+  signInWithRedirect(auth, googleProvider);
+});
+$('signOutBtn').addEventListener('click', () => signOut(auth));
+
+getRedirectResult(auth).catch(err => {
+  console.error(err);
+  loginError.textContent = 'ログインに失敗しました: ' + err.message;
+  loginError.hidden = false;
+});
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  loadingScreen.hidden = true;
+  if (user) {
+    loginScreen.hidden = true;
+    document.body.classList.add('logged-in');
+    userAvatar.hidden = !user.photoURL;
+    if (user.photoURL) userAvatar.src = user.photoURL;
+    subscribeToItems();
+  } else {
+    loginScreen.hidden = false;
+    document.body.classList.remove('logged-in');
+    if (unsubscribeItems) { unsubscribeItems(); unsubscribeItems = null; }
+    allItems = [];
+    updateFilterOptions();
+    renderCards();
+  }
+});
+
+function subscribeToItems() {
+  if (unsubscribeItems) unsubscribeItems();
+  const itemsQuery = query(collection(db, 'users', currentUser.uid, 'items'), orderBy('createdAt', 'desc'));
+  unsubscribeItems = onSnapshot(itemsQuery, (snapshot) => {
+    allItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateFilterOptions();
+    renderCards();
+  }, (err) => {
+    console.error(err);
+    showToast('データの取得に失敗しました');
+  });
+}
+
 /* ---------- rendering ---------- */
-function revokeCardThumbURLs() { cardThumbURLs.forEach(u => URL.revokeObjectURL(u)); cardThumbURLs = []; }
 function revokeFormPreviewURLs() { formPreviewURLs.forEach(u => URL.revokeObjectURL(u)); formPreviewURLs = []; }
-function revokeDetailURLs() { detailURLs.forEach(u => URL.revokeObjectURL(u)); detailURLs = []; }
 
 function uniqueSorted(arr) { return [...new Set(arr)].sort((a, b) => a.localeCompare(b, 'ja')); }
 
@@ -588,7 +637,6 @@ function getFilteredSortedItems() {
 }
 
 function renderCards() {
-  revokeCardThumbURLs();
   const items = getFilteredSortedItems();
   cardGrid.innerHTML = '';
   resultCount.textContent = allItems.length ? `${items.length}件 / 全${allItems.length}件` : '';
@@ -601,9 +649,7 @@ function renderCards() {
 
     let thumbHTML = '<div class="no-photo">No Photo</div>';
     if (item.photos && item.photos[0]) {
-      const url = URL.createObjectURL(item.photos[0]);
-      cardThumbURLs.push(url);
-      thumbHTML = `<img src="${url}" alt="">`;
+      thumbHTML = `<img src="${item.photos[0].url}" alt="" loading="lazy">`;
     }
 
     const metaParts = [];
@@ -628,13 +674,10 @@ function renderCards() {
 function openDetail(id) {
   const item = allItems.find(i => i.id === id);
   if (!item) return;
-  revokeDetailURLs();
 
-  const photosHTML = (item.photos || []).map(blob => {
-    const url = URL.createObjectURL(blob);
-    detailURLs.push(url);
-    return `<img src="${url}" class="detail-photo" alt="">`;
-  }).join('');
+  const photosHTML = (item.photos || []).map(p =>
+    `<img src="${p.url}" class="detail-photo" alt="">`
+  ).join('');
 
   const rows = [
     ['ブランド', item.brand],
@@ -731,9 +774,14 @@ $('cameraInput').addEventListener('change', (e) => {
 function renderPhotoPreview() {
   revokeFormPreviewURLs();
   photoPreviewList.innerHTML = '';
-  formPhotos.forEach((blob, idx) => {
-    const url = URL.createObjectURL(blob);
-    formPreviewURLs.push(url);
+  formPhotos.forEach((p, idx) => {
+    let url;
+    if (p instanceof File) {
+      url = URL.createObjectURL(p);
+      formPreviewURLs.push(url);
+    } else {
+      url = p.url;
+    }
     const div = document.createElement('div');
     div.className = 'photo-preview-item';
     div.innerHTML = `
@@ -761,28 +809,54 @@ function renderPhotoPreview() {
   });
 }
 
+async function uploadOnePhoto(itemId, file, idx) {
+  const path = `users/${currentUser.uid}/items/${itemId}/${Date.now()}_${idx}_${file.name}`;
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, file);
+  const url = await getDownloadURL(storageRef);
+  return { path, url };
+}
+
 itemForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const item = readFormToItem();
-  item.photos = formPhotos;
-  if (currentEditId) {
-    item.id = currentEditId;
-    const existing = allItems.find(i => i.id === currentEditId);
+  const submitBtn = itemForm.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  try {
+    const itemId = currentEditId || doc(collection(db, 'users', currentUser.uid, 'items')).id;
+    const existing = currentEditId ? allItems.find(i => i.id === currentEditId) : null;
+
+    const keptPaths = new Set(formPhotos.filter(p => !(p instanceof File)).map(p => p.path));
+    const removedPhotos = (existing?.photos || []).filter(p => !keptPaths.has(p.path));
+
+    const photos = await Promise.all(formPhotos.map((p, idx) =>
+      p instanceof File ? uploadOnePhoto(itemId, p, idx) : Promise.resolve(p)
+    ));
+
+    const item = readFormToItem();
+    item.photos = photos;
     item.createdAt = existing ? existing.createdAt : Date.now();
-  } else {
-    item.createdAt = Date.now();
+    item.updatedAt = Date.now();
+
+    await setDoc(doc(db, 'users', currentUser.uid, 'items', itemId), item);
+    await Promise.all(removedPhotos.map(p => deleteObject(ref(storage, p.path)).catch(() => {})));
+
+    closeModal(formModal);
+    showToast(currentEditId ? '更新しました' : '追加しました');
+  } catch (err) {
+    console.error(err);
+    alert('保存に失敗しました: ' + err.message);
+  } finally {
+    submitBtn.disabled = false;
   }
-  item.updatedAt = Date.now();
-  await dbPut(item);
-  await reloadItems();
-  closeModal(formModal);
-  showToast(currentEditId ? '更新しました' : '追加しました');
 });
 
 async function deleteItem(id) {
   if (!confirm('このアイテムを削除しますか？この操作は取り消せません。')) return;
-  await dbDelete(id);
-  await reloadItems();
+  const item = allItems.find(i => i.id === id);
+  await deleteDoc(doc(db, 'users', currentUser.uid, 'items', id));
+  if (item?.photos) {
+    await Promise.all(item.photos.map(p => deleteObject(ref(storage, p.path)).catch(() => {})));
+  }
   showToast('削除しました');
 }
 
@@ -801,9 +875,13 @@ async function dataURLToBlob(dataURL) {
 }
 
 $('exportBtn').addEventListener('click', async () => {
-  const items = await dbGetAll();
-  const exportItems = await Promise.all(items.map(async item => {
-    const photos = await Promise.all((item.photos || []).map(blobToDataURL));
+  showToast('書き出し中…');
+  const exportItems = await Promise.all(allItems.map(async item => {
+    const photos = await Promise.all((item.photos || []).map(async p => {
+      const res = await fetch(p.url);
+      const blob = await res.blob();
+      return blobToDataURL(blob);
+    }));
     return { ...item, photos };
   }));
   const payload = {
@@ -831,16 +909,23 @@ $('importFile').addEventListener('change', async (e) => {
   try {
     const payload = JSON.parse(await file.text());
     if (!Array.isArray(payload.items)) throw new Error('invalid format');
-    const converted = await Promise.all(payload.items.map(async item => {
-      const photos = await Promise.all((item.photos || []).map(dataURLToBlob));
+    if (!confirm(`${payload.items.length}件のアイテムを読み込みます。既存データに追加されます。よろしいですか？`)) return;
+    showToast('読み込み中…');
+    for (const item of payload.items) {
+      const itemId = doc(collection(db, 'users', currentUser.uid, 'items')).id;
+      const photos = await Promise.all((item.photos || []).map(async (dataURL, idx) => {
+        const blob = await dataURLToBlob(dataURL);
+        const path = `users/${currentUser.uid}/items/${itemId}/${Date.now()}_${idx}`;
+        const storageRef = ref(storage, path);
+        await uploadBytes(storageRef, blob);
+        const url = await getDownloadURL(storageRef);
+        return { path, url };
+      }));
       const clone = { ...item, photos };
       delete clone.id;
-      return clone;
-    }));
-    if (!confirm(`${converted.length}件のアイテムを読み込みます。既存データに追加されます。よろしいですか？`)) return;
-    await dbAddMany(converted);
-    await reloadItems();
-    showToast(`${converted.length}件のアイテムを読み込みました`);
+      await setDoc(doc(db, 'users', currentUser.uid, 'items', itemId), clone);
+    }
+    showToast(`${payload.items.length}件のアイテムを読み込みました`);
   } catch (err) {
     console.error(err);
     alert('ファイルの読み込みに失敗しました。正しいバックアップファイルか確認してください。');
@@ -855,7 +940,6 @@ function closeModal(modal) {
   modal.hidden = true;
   document.body.style.overflow = '';
   if (modal === formModal) revokeFormPreviewURLs();
-  if (modal === detailModal) revokeDetailURLs();
 }
 document.querySelectorAll('[data-close]').forEach(btn =>
   btn.addEventListener('click', (e) => closeModal(e.target.closest('.modal-overlay')))
@@ -889,14 +973,6 @@ $('resetFiltersBtn').addEventListener('click', () => {
   sortSelect.value = 'purchaseDate_desc';
   renderCards();
 });
-
-async function reloadItems() {
-  allItems = await dbGetAll();
-  updateFilterOptions();
-  renderCards();
-}
-
-reloadItems();
 
 if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persisted().then(already => {
