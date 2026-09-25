@@ -351,7 +351,8 @@
       <div class="form-grid" style="margin-top:16px;">
         <div class="form-group">
           <label for="brand">ブランド</label>
-          <input type="text" id="brand" name="brand">
+          <input type="text" id="brand" name="brand" list="brandDatalist" autocomplete="off">
+          <datalist id="brandDatalist"></datalist>
         </div>
         <div class="form-group">
           <label for="itemName">アイテム名</label>
@@ -594,9 +595,11 @@ function fillSelect(selectEl, values, placeholder) {
 }
 
 function updateFilterOptions() {
-  fillSelect(filterBrand, uniqueSorted(allItems.map(i => i.brand).filter(Boolean)), 'ブランド：すべて');
+  const brands = uniqueSorted(allItems.map(i => i.brand).filter(Boolean));
+  fillSelect(filterBrand, brands, 'ブランド：すべて');
   fillSelect(filterCountry, uniqueSorted(allItems.map(i => i.countryOfOrigin).filter(Boolean)), '生産国：すべて');
   fillSelect(filterEra, uniqueSorted(allItems.map(i => i.era).filter(Boolean)), '年代：すべて');
+  $('brandDatalist').innerHTML = brands.map(b => `<option value="${escapeHTML(b)}">`).join('');
 }
 
 function getFilteredSortedItems() {
